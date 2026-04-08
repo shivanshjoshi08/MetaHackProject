@@ -39,6 +39,52 @@ def health():
     return {"status": "ok", "inbox_size": len(obs.inbox)}
 
 
+# ─── OpenEnv Compliant REST API Endpoints ────────────────────────────────────
+from pydantic import BaseModel
+from typing import Dict, Any
+
+class ResetRequest(BaseModel):
+    task_id: int = 1
+
+class StepRequest(BaseModel):
+    action: Dict[str, Any]
+
+_sessions = {}
+
+@app.post("/reset")
+def api_reset(req: ResetRequest):
+    env = EmailTriageEnv()
+    obs = env.reset(task_id=req.task_id)
+    _sessions["default"] = env
+    return obs.model_dump() if hasattr(obs, "model_dump") else obs.dict()
+
+@app.post("/step")
+def api_step(req: StepRequest):
+    env = _sessions.get("default")
+    if not env:
+        env = EmailTriageEnv()
+        env.reset(task_id=1)
+        _sessions["default"] = env
+        
+    from baseline_inference import parse_action
+    
+    try:
+        act = parse_action(req.action)
+    except Exception as e:
+        # Standard error feedback on invalid action format
+        return {"error": str(e)}
+
+    obs, reward, done, info = env.step(act)
+    return {
+        "observation": obs.model_dump() if hasattr(obs, "model_dump") else obs.dict(),
+        "reward": float(reward.score),
+        "done": done,
+        "info": info
+    }
+
+
+
+
 @app.websocket("/ws/task/{task_id}")
 async def websocket_task(websocket: WebSocket, task_id: int):
     """

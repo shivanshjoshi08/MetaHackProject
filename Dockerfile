@@ -11,5 +11,5 @@ COPY . .
 # Validate OpenEnv compliance at build time
 RUN openenv validate openenv.yaml
 
-# Default: run baseline inference (override via docker run args)
-CMD ["python", "baseline_inference.py"]
+# Default: run the FastAPI backend for OpenEnv compliance
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
