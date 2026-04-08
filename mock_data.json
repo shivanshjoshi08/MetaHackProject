@@ -1,0 +1,22 @@
+{
+    "customers": [
+        {
+            "email": "john.doe@example.com",
+            "name": "John Doe",
+            "account_id": "ACC-1001",
+            "order_id": "ORD-2024-001",
+            "order_status": "Shipped",
+            "order_date": "2024-11-15",
+            "billing_issue": "Duplicate charge on Nov 14"
+        },
+        {
+            "email": "priya.sharma@techcorp.in",
+            "name": "Priya Sharma",
+            "account_id": "ACC-1002",
+            "order_id": "ORD-2024-002",
+            "order_status": "Processing",
+            "order_date": "2024-11-20",
+            "billing_issue": null
+        }
+    ]
+}

@@ -1,0 +1,36 @@
+name: email-triage-env
+version: "1.0.0"
+description: >
+  A customer support email triage environment where an agent reads,
+  categorizes, queries a customer database, and drafts responses.
+tags:
+  - openenv
+  - email
+  - customer-support
+  - real-world
+entrypoint: environment.py
+entrypoint_class: EmailTriageEnv
+tasks:
+  - id: 1
+    name: Single Email Categorization
+    difficulty: easy
+    max_steps: 3
+    grader: tasks.grade_task1
+  - id: 2
+    name: Inbox Triage + Draft Response
+    difficulty: medium
+    max_steps: 15
+    grader: tasks.grade_task2
+  - id: 3
+    name: Full Triage + DB Lookup + Personalized Response
+    difficulty: hard
+    max_steps: 40
+    grader: tasks.grade_task3
+observation_space:
+  type: structured
+  schema: Observation
+action_space:
+  type: union
+  variants: [CategorizeEmail, QueryDatabase, DraftResponse, SendResponse]
+reward_range: [-1.0, 1.0]
+reward_type: dense
