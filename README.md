@@ -22,10 +22,10 @@ This is an **OpenEnv-compliant reinforcement learning environment** centered on 
 - **Reward**: Dense (Each sub-step yields + / - rewards).
 
 ## Evaluation
-A deterministic Baseline Agent script using `baseline_inference.py` is included. You can validate and test natively with standard OpenEnv tools:
+A deterministic Baseline Agent script using `inference.py` is included. You can validate and test natively with standard OpenEnv tools:
 ```bash
 openenv validate openenv.yaml
 ```
 
 ### Recent Updates
-- **Robust Baseline Inference**: The baseline agent script (`baseline_inference.py`) has been upgraded with improved LLM prompt engineering and robust error handling. It now gracefully recovers from Pydantic `ValidationError`s when the agent occasionally hallucinate actions, tracks action history to avoid repetition penalties, and cleanly drives tasks 1, 2, and 3 without crashing the environment.
+- **Robust Baseline Inference**: The baseline agent script (`inference.py`) has been upgraded with improved LLM prompt engineering and robust error handling. It now gracefully recovers from Pydantic `ValidationError`s when the agent occasionally hallucinate actions, tracks action history to avoid repetition penalties, and cleanly drives tasks 1, 2, and 3 without crashing the environment.

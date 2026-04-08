@@ -12,7 +12,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from environment import EmailTriageEnv
-from baseline_inference import run_task_stream
+from inference import run_task_stream
 import uvicorn
 
 app = FastAPI(title="OpenEnv Email Triage")
@@ -66,7 +66,7 @@ def api_step(req: StepRequest):
         env.reset(task_id=1)
         _sessions["default"] = env
         
-    from baseline_inference import parse_action
+    from inference import parse_action
     
     try:
         act = parse_action(req.action)
