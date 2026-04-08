@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const WS_BASE_URL = 'ws://localhost:8000'
+const WS_BASE_URL = 'wss://shivanshjoshi-openenv-email-triage.hf.space'
 
 const CATEGORY_COLORS = {
   Billing:   { bg: '#1e3a5f', border: '#3b82f6', text: '#60a5fa' },
@@ -229,7 +229,7 @@ export default function App() {
       console.error('[WS] Error:', err)
       addLog({
         type: 'penalty',
-        text: '❌ WebSocket connection error. Is the backend running on port 8000?',
+        text: '❌ WebSocket connection error. Check if backend is running.',
       })
       setRunning(false)
     }

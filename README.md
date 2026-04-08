@@ -1,15 +1,12 @@
---- 
-title: OpenEnv Email Triage 
-emoji: 📧 
-colorFrom: blue 
-colorTo: indigo 
-sdk: docker 
-pinned: false 
-tags: 
-  - openenv 
-  - reinforcement-learning 
-  - email-triage
---- 
+---
+title: OpenEnv Email Triage
+emoji: 📧
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_file: app.py
+pinned: false
+---
 
 # Customer Support Email Triage Environment
 
@@ -28,4 +25,3 @@ This is an **OpenEnv-compliant reinforcement learning environment** centered on 
 A deterministic Baseline Agent script using `baseline_inference.py` is included. You can validate and test natively with standard OpenEnv tools:
 ```bash
 openenv validate openenv.yaml
-```
