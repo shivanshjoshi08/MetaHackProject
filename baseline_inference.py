@@ -55,6 +55,8 @@ RULES:
   - NEVER use label text like 'NEEDS CATEGORIZATION' as a category value.
   - NEVER repeat an action for an email that is already done.
   - Look at the current state carefully and pick the NEXT logical action.
+
+  If you have already drafted a response for an email, do NOT draft it again. Move to the next email or use the SendResponse action to conclude the task.
 """
 
 
