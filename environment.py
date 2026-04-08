@@ -103,19 +103,27 @@ class EmailTriageEnv:
         elif task_id == 3:
             inbox = [
                 Email(id="email_001", sender="john.doe@example.com", subject="Double charge", body="Check my billing.", received_at=datetime.now().isoformat()),
-                Email(id="email_002", sender="priya.sharma@techcorp.in", subject="Order update", body="Where is my order?", received_at=datetime.now().isoformat()),
-                Email(id="email_003", sender="tech1@example.com", subject="Bug report", body="Error 500.", received_at=datetime.now().isoformat()),
-                Email(id="email_004", sender="spam1@example.com", subject="Cheap meds", body="Buy now.", received_at=datetime.now().isoformat())
+                Email(id="email_002", sender="alice.wonder@wonderland.com", subject="Wrong amount", body="You charged me too much.", received_at=datetime.now().isoformat()),
+                Email(id="email_003", sender="priya.sharma@techcorp.in", subject="Order update", body="Where is my order?", received_at=datetime.now().isoformat()),
+                Email(id="email_004", sender="carlos.mendez@example.com", subject="Delivery query", body="Has my item been delivered?", received_at=datetime.now().isoformat()),
+                Email(id="email_005", sender="tech1@example.com", subject="Bug report", body="Error 500.", received_at=datetime.now().isoformat()),
+                Email(id="email_006", sender="tech2@test.com", subject="System crash", body="It crashed again.", received_at=datetime.now().isoformat()),
+                Email(id="email_007", sender="tech3@test.com", subject="Login failed", body="Cannot login to my account.", received_at=datetime.now().isoformat()),
+                Email(id="email_008", sender="spam1@example.com", subject="Cheap meds", body="Buy now.", received_at=datetime.now().isoformat()),
+                Email(id="email_009", sender="spam2@example.com", subject="Loan approved", body="Click here for money.", received_at=datetime.now().isoformat()),
+                Email(id="email_010", sender="sales1@example.com", subject="Bulk order", body="Need large order discount.", received_at=datetime.now().isoformat())
             ]
-            # Add remaining to make it 10 for full completion, keeping it simple here
-            for i in range(5, 11):
-                inbox.append(Email(id=f"email_{i:03d}", sender=f"user{i}@test.com", subject="Test", body="Test body", received_at=datetime.now().isoformat()))
-                self._internal_state["ground_truth"][f"email_{i:03d}"] = "Other"
 
-            self._internal_state["ground_truth"].update({"email_001": "Billing", "email_002": "Billing", "email_003": "Technical", "email_004": "Spam"})
-            self._internal_state["emails_requiring_db_lookup"] = ["email_001", "email_002"]
-            self._internal_state["expected_order_ids"] = {"email_001": "ORD-2024-001", "email_002": "ORD-2024-002"}
-            self._internal_state["email_senders"] = {"email_001": "john.doe@example.com", "email_002": "priya.sharma@techcorp.in"}
+            self._internal_state["ground_truth"].update({
+                "email_001": "Billing", "email_002": "Billing", "email_003": "Billing", "email_004": "Billing",
+                "email_005": "Technical", "email_006": "Technical", "email_007": "Technical",
+                "email_008": "Spam", "email_009": "Spam",
+                "email_010": "Sales"
+            })
+            
+            self._internal_state["emails_requiring_db_lookup"] = ["email_001", "email_002", "email_003", "email_004"]
+            self._internal_state["expected_order_ids"] = {"email_001": "ORD-2024-001", "email_002": "ORD-2024-004", "email_003": "ORD-2024-002", "email_004": "ORD-2024-003"}
+            self._internal_state["email_senders"] = {"email_001": "john.doe@example.com", "email_002": "alice.wonder@wonderland.com", "email_003": "priya.sharma@techcorp.in", "email_004": "carlos.mendez@example.com"}
 
         self._current_obs = Observation(inbox=inbox, processed=[], task_id=task_id, step_number=0)
         return self._current_obs

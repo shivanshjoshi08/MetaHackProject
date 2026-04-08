@@ -1,22 +1,184 @@
 {
-    "customers": [
-        {
-            "email": "john.doe@example.com",
-            "name": "John Doe",
-            "account_id": "ACC-1001",
-            "order_id": "ORD-2024-001",
-            "order_status": "Shipped",
-            "order_date": "2024-11-15",
-            "billing_issue": "Duplicate charge on Nov 14"
-        },
-        {
-            "email": "priya.sharma@techcorp.in",
-            "name": "Priya Sharma",
-            "account_id": "ACC-1002",
-            "order_id": "ORD-2024-002",
-            "order_status": "Processing",
-            "order_date": "2024-11-20",
-            "billing_issue": null
-        }
-    ]
+  "customers": [
+    {
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "account_id": "ACC-1001",
+      "order_id": "ORD-2024-001",
+      "order_status": "Shipped",
+      "order_date": "2024-11-15",
+      "billing_issue": "Duplicate charge on Nov 14"
+    },
+    {
+      "email": "priya.sharma@techcorp.in",
+      "name": "Priya Sharma",
+      "account_id": "ACC-1002",
+      "order_id": "ORD-2024-002",
+      "order_status": "Processing",
+      "order_date": "2024-11-20",
+      "billing_issue": null
+    },
+    {
+      "email": "carlos.mendez@example.com",
+      "name": "Carlos Mendez",
+      "account_id": "ACC-1003",
+      "order_id": "ORD-2024-003",
+      "order_status": "Delivered",
+      "order_date": "2024-11-10",
+      "billing_issue": null
+    },
+    {
+      "email": "alice.wonder@wonderland.com",
+      "name": "Alice Wonder",
+      "account_id": "ACC-1004",
+      "order_id": "ORD-2024-004",
+      "order_status": "Shipped",
+      "order_date": "2024-11-18",
+      "billing_issue": "Charged different amount"
+    },
+    {
+      "email": "tech1@example.com",
+      "name": "Tech User 1",
+      "account_id": "ACC-1005",
+      "order_id": "ORD-2024-005",
+      "order_status": "Processing",
+      "order_date": "2024-11-21",
+      "billing_issue": null
+    },
+    {
+      "email": "user6@test.com",
+      "name": "User Six",
+      "account_id": "ACC-1006",
+      "order_id": "ORD-2024-006",
+      "order_status": "Cancelled",
+      "order_date": "2024-11-05",
+      "billing_issue": "Refund not received"
+    },
+    {
+      "email": "user7@test.com",
+      "name": "User Seven",
+      "account_id": "ACC-1007",
+      "order_id": "ORD-2024-007",
+      "order_status": "Shipped",
+      "order_date": "2024-11-16",
+      "billing_issue": null
+    },
+    {
+      "email": "user8@test.com",
+      "name": "User Eight",
+      "account_id": "ACC-1008",
+      "order_id": "ORD-2024-008",
+      "order_status": "Delivered",
+      "order_date": "2024-11-01",
+      "billing_issue": null
+    },
+    {
+      "email": "user9@test.com",
+      "name": "User Nine",
+      "account_id": "ACC-1009",
+      "order_id": "ORD-2024-009",
+      "order_status": "Processing",
+      "order_date": "2024-11-22",
+      "billing_issue": null
+    },
+    {
+      "email": "user10@test.com",
+      "name": "User Ten",
+      "account_id": "ACC-1010",
+      "order_id": "ORD-2024-010",
+      "order_status": "Shipped",
+      "order_date": "2024-11-17",
+      "billing_issue": "Missing invoice"
+    },
+    {
+      "email": "chloe.smith@example.org",
+      "name": "Chloe Smith",
+      "account_id": "ACC-1011",
+      "order_id": "ORD-2024-011",
+      "order_status": "Delivered",
+      "order_date": "2024-11-02",
+      "billing_issue": null
+    },
+    {
+      "email": "david.jones@example.net",
+      "name": "David Jones",
+      "account_id": "ACC-1012",
+      "order_id": "ORD-2024-012",
+      "order_status": "Cancelled",
+      "order_date": "2024-11-03",
+      "billing_issue": "Refund pending"
+    },
+    {
+      "email": "eva.green@example.com",
+      "name": "Eva Green",
+      "account_id": "ACC-1013",
+      "order_id": "ORD-2024-013",
+      "order_status": "Processing",
+      "order_date": "2024-11-20",
+      "billing_issue": null
+    },
+    {
+      "email": "frank.wright@example.com",
+      "name": "Frank Wright",
+      "account_id": "ACC-1014",
+      "order_id": "ORD-2024-014",
+      "order_status": "Shipped",
+      "order_date": "2024-11-18",
+      "billing_issue": null
+    },
+    {
+      "email": "grace.lee@example.edu",
+      "name": "Grace Lee",
+      "account_id": "ACC-1015",
+      "order_id": "ORD-2024-015",
+      "order_status": "Delivered",
+      "order_date": "2024-11-10",
+      "billing_issue": "Overcharged"
+    },
+    {
+      "email": "harry.potter@example.co.uk",
+      "name": "Harry Potter",
+      "account_id": "ACC-1016",
+      "order_id": "ORD-2024-016",
+      "order_status": "Processing",
+      "order_date": "2024-11-21",
+      "billing_issue": null
+    },
+    {
+      "email": "isabella.rossi@example.it",
+      "name": "Isabella Rossi",
+      "account_id": "ACC-1017",
+      "order_id": "ORD-2024-017",
+      "order_status": "Cancelled",
+      "order_date": "2024-11-05",
+      "billing_issue": null
+    },
+    {
+      "email": "jack.black@example.com",
+      "name": "Jack Black",
+      "account_id": "ACC-1018",
+      "order_id": "ORD-2024-018",
+      "order_status": "Shipped",
+      "order_date": "2024-11-15",
+      "billing_issue": "Late fee applied incorrectly"
+    },
+    {
+      "email": "karen.smith@example.com",
+      "name": "Karen Smith",
+      "account_id": "ACC-1019",
+      "order_id": "ORD-2024-019",
+      "order_status": "Delivered",
+      "order_date": "2024-11-08",
+      "billing_issue": null
+    },
+    {
+      "email": "liam.neeson@example.com",
+      "name": "Liam Neeson",
+      "account_id": "ACC-1020",
+      "order_id": "ORD-2024-020",
+      "order_status": "Processing",
+      "order_date": "2024-11-22",
+      "billing_issue": null
+    }
+  ]
 }
