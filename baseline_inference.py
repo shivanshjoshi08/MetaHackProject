@@ -32,93 +32,124 @@ GRADERS = {1: grade_task1, 2: grade_task2, 3: grade_task3}
 
 SYSTEM_PROMPT = """
 You are an AI agent acting as a customer support specialist.
-You will receive an inbox of support emails and must process them.
+You will receive a support email inbox and must process every email completely.
 
-Always respond with a SINGLE JSON action object (no extra text). Available actions:
-  {"action_type": "categorize", "email_id": "...", "category": "..."}
-  {"action_type": "query_db", "customer_email": "..."}
-  {"action_type": "draft", "email_id": "...", "draft_text": "..."}
-  {"action_type": "send", "email_id": "..."}
+ALWAYS reply with exactly ONE JSON object. No explanation, no markdown, no extra text.
 
-Categories: Billing | Technical | Sales | Spam | Other
+Available action types:
+  {"action_type": "categorize", "email_id": "email_001", "category": "Billing"}
+  {"action_type": "query_db", "customer_email": "user@example.com"}
+  {"action_type": "draft", "email_id": "email_001", "draft_text": "Dear customer..."}
+  {"action_type": "send", "email_id": "email_001"}
 
-STRATEGY:
-1. First, categorize every email in the inbox one by one.
-2. For Billing emails: after categorizing, query the database using the sender's email.
-3. After getting DB results, draft a response that includes the customer's Order ID.
-4. After drafting, send the response.
-5. Continue until all emails are processed.
+VALID CATEGORIES (use EXACTLY one of these strings, nothing else):
+  Billing | Technical | Sales | Spam | Other
 
-Process emails in order (email_001 first, then email_002, etc.).
+STEP-BY-STEP STRATEGY:
+  Phase 1 — CATEGORIZE: For each email NOT YET CATEGORIZED, output a 'categorize' action.
+  Phase 2 — DB LOOKUP: For each Billing/Order email, output a 'query_db' action using that sender's email.
+  Phase 3 — DRAFT: For each Billing email, output a 'draft' action. Include the Order ID from DB results.
+  Phase 4 — SEND: For each drafted email, output a 'send' action.
+
+RULES:
+  - NEVER use label text like 'NEEDS CATEGORIZATION' as a category value.
+  - NEVER repeat an action for an email that is already done.
+  - Look at the current state carefully and pick the NEXT logical action.
 """
 
 
-# def build_prompt(obs) -> str:
-#     """Build a rich prompt that gives the LLM full situational awareness."""
-#     lines = [
-#         f"Task ID: {obs.task_id} | Step: {obs.step_number}",
-#         f"Inbox emails ({len(obs.inbox)} total):",
-#     ]
-#     for email in obs.inbox:
-#         lines.append(f"  - {email.id}: from={email.sender} subject=\"{email.subject}\"")
-
-#     lines.append(f"\nAlready processed (categorized): {obs.processed}")
-
-#     if obs.db_query_result:
-#         lines.append(f"\nLast DB query result: {json.dumps(obs.db_query_result)}")
-#     else:
-#         lines.append("\nNo DB query result available.")
-
-#     if obs.drafted_responses:
-#         lines.append(f"Drafted responses exist for: {list(obs.drafted_responses.keys())}")
-
-#     uncategorized = [e.id for e in obs.inbox if e.id not in obs.processed]
-#     if uncategorized:
-#         lines.append(f"\nEmails still needing categorization: {uncategorized}")
-#         lines.append(f"Next email to process: {uncategorized[0]}")
-#     else:
-#         lines.append("\nAll emails are categorized. Draft/send responses if needed, or the task may be done.")
-
-#     lines.append("\nWhat is your next SINGLE action? Reply with only a JSON object.")
-#     return "\n".join(lines)
 def build_prompt(obs) -> str:
-    # Un emails ko filter karo jo abhi tak categorize nahi hue hain
-    unprocessed_emails = [e for e in obs.inbox if e.id not in obs.processed]
-    
-    prompt = f"Current step: {obs.step_number}.\n"
-    prompt += f"Already categorized emails: {obs.processed}\n"
-    prompt += f"Drafts ready for: {list(obs.drafted_responses.keys())}\n\n"
-    
-    if obs.db_query_result:
-        prompt += f"Last DB Query Result: {obs.db_query_result}\n\n"
-        
-    prompt += "--- INBOX DETAILS ---\n"
-    for e in obs.inbox:
-        status = "PROCESSED" if e.id in obs.processed else "NEEDS CATEGORIZATION"
-        prompt += f"[{status}] ID: {e.id} | Sender: {e.sender} | Subject: {e.subject} | Body: {e.body}\n"
-        
-    prompt += "\nINSTRUCTIONS:\n"
-    prompt += "1. If an email is 'NEEDS CATEGORIZATION', categorize it.\n"
-    prompt += "2. If it is Billing/Order related, query_db using their sender email.\n"
-    prompt += "3. Draft a response using the Order ID from the DB.\n"
-    prompt += "4. Do NOT repeat an action you have already taken!\n"
-    prompt += "What is your single NEXT action?"
-    
-    return prompt
+    """Build a state-aware prompt that never leaks label text as category values."""
+    uncategorized = [e for e in obs.inbox if e.id not in obs.processed]
+    billing_ids = [
+        eid for eid, cat in (
+            # Only check emails that have been categorized
+            {e.id: obs.processed for e in obs.inbox if e.id in obs.processed}
+        ).items()
+    ]
 
+    lines = [
+        f"=== CURRENT STATE (Step {obs.step_number}) ===",
+        f"Task: {obs.task_id}",
+        "",
+        "--- INBOX ---",
+    ]
+
+    for e in obs.inbox:
+        done = e.id in obs.processed
+        drafted = e.id in obs.drafted_responses
+        tag = "[CATEGORIZED]" if done else "[NOT CATEGORIZED]"
+        dtag = " [DRAFT READY]" if drafted else ""
+        lines.append(
+            f"  {tag}{dtag} {e.id} | from: {e.sender} | subject: {e.subject} | body: {e.body}"
+        )
+
+    lines.append("")
+    lines.append(f"Categorized email IDs so far: {obs.processed}")
+    lines.append(f"Draft responses exist for: {list(obs.drafted_responses.keys())}")
+
+    if obs.db_query_result:
+        lines.append(f"\nLast DB result: {json.dumps(obs.db_query_result)}")
+    else:
+        lines.append("\nNo DB query has been made yet.")
+
+    lines.append("")
+    lines.append("--- WHAT TO DO NEXT ---")
+
+    if uncategorized:
+        next_email = uncategorized[0]
+        lines.append(f"Action needed: CATEGORIZE {next_email.id} (from {next_email.sender}, subject: {next_email.subject})")
+        lines.append("Choose EXACTLY one of these category strings: Billing, Technical, Sales, Spam, Other")
+        lines.append(f'Output: {{"action_type": "categorize", "email_id": "{next_email.id}", "category": "<ONE OF THE 5 VALID CATEGORIES>"}}')        
+    else:
+        lines.append("All emails are categorized. Move to Phase 2/3/4:")
+        lines.append("  - If a Billing email has no DB lookup yet: use query_db with the sender email.")
+        lines.append("  - If DB result exists and no draft yet: use draft (include the Order ID in draft_text).")
+        lines.append("  - If draft exists and not sent yet: use send.")
+
+    lines.append("\nReply with ONE JSON object only. No extra text.")
+    return "\n".join(lines)
+
+
+# Mapping to catch common LLM mislabellings before Pydantic validation
+_CATEGORY_NORMALISE = {
+    "billing": "Billing",
+    "technical": "Technical",
+    "tech": "Technical",
+    "sales": "Sales",
+    "spam": "Spam",
+    "other": "Other",
+}
 
 def parse_action(raw_dict: dict):
-    """Dispatch a raw dict into the correct Pydantic action model."""
+    """Dispatch a raw dict into the correct Pydantic action model.
+    
+    Normalises the category field before validation so that case differences
+    or minor LLM typos don't cause hard crashes.
+    """
     act_type = raw_dict.get("action_type")
+
     if act_type == "categorize":
+        # Normalise category to a valid value
+        raw_cat = str(raw_dict.get("category", "")).strip()
+        normalised = _CATEGORY_NORMALISE.get(raw_cat.lower())
+        if normalised:
+            raw_dict = {**raw_dict, "category": normalised}
+        elif raw_cat not in ("Billing", "Technical", "Sales", "Spam", "Other"):
+            # Last resort: reject unknown values with a clear message
+            raise ValueError(
+                f"LLM returned invalid category '{raw_cat}'. "
+                f"Valid values: Billing, Technical, Sales, Spam, Other"
+            )
         return CategorizeEmail(**raw_dict)
+
     if act_type == "query_db":
         return QueryDatabase(**raw_dict)
     if act_type == "draft":
         return DraftResponse(**raw_dict)
     if act_type == "send":
         return SendResponse(**raw_dict)
-    raise ValueError(f"Unknown action type: {act_type}")
+    raise ValueError(f"Unknown action type: '{act_type}'")
 
 
 # ─── Async Generator (used by WebSocket) ───────────────────────────────────────
@@ -172,27 +203,47 @@ async def run_task_stream(task_id: int):
         }
         await asyncio.sleep(0.3)
 
-        # ── Call LLM ──
+        # ── Call LLM (with up to 2 retries on parse failure) ──
         prompt = build_prompt(obs)
-        try:
-            response = await asyncio.to_thread(
-                client.chat.completions.create,
-                model=MODEL,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=512,
-                temperature=0.0,
-            )
-            raw = json.loads(response.choices[0].message.content)
-            action = parse_action(raw)
-        except Exception as e:
+        action = None
+        last_error = None
+        retry_messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+
+        for attempt in range(3):  # up to 3 attempts per step
+            try:
+                response = await asyncio.to_thread(
+                    client.chat.completions.create,
+                    model=MODEL,
+                    messages=retry_messages,
+                    response_format={"type": "json_object"},
+                    max_tokens=512,
+                    temperature=0.0,
+                )
+                raw = json.loads(response.choices[0].message.content)
+                action = parse_action(raw)
+                break  # success
+            except Exception as e:
+                last_error = e
+                # Feed the error back as an assistant + user pair for the next attempt
+                retry_messages = retry_messages + [
+                    {"role": "assistant", "content": response.choices[0].message.content
+                        if 'response' in dir() and response.choices else "{}"},
+                    {"role": "user", "content": (
+                        f"Your previous response caused a validation error: {e}\n"
+                        "Reply ONLY with a corrected JSON object. "
+                        "For category, use EXACTLY one of: Billing, Technical, Sales, Spam, Other"
+                    )},
+                ]
+                await asyncio.sleep(0.2)
+
+        if action is None:
             yield {
                 "event": "error",
                 "type": "penalty",
-                "text": f"❌ Inference or parsing failed: {str(e)}",
+                "text": f"❌ Agent failed after 3 attempts: {last_error}",
                 "step": obs.step_number,
                 "max_steps": max_steps,
                 "cumulative_reward": env._cumulative_reward,
