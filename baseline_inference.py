@@ -8,8 +8,16 @@ Provides both:
 All LLM calls go through Groq's OpenAI-compatible endpoint.
 The API key is read from the GROQ_API_KEY environment variable.
 """
-
+from dotenv import load_dotenv
 import os
+load_dotenv()
+api_key = os.environ.get("GROQ_API_KEY")
+if not api_key:
+    print("❌ ERROR: GROQ_API_KEY not found in environment!")
+    exit(1)
+else:
+    print(f"✅ Key loaded successfully (Starts with: {api_key[:7]}...)")
+ 
 import json
 import asyncio
 from openai import OpenAI
@@ -25,7 +33,7 @@ from tasks import grade_task1, grade_task2, grade_task3
 # ─── LLM Client ────────────────────────────────────────────────────────────────
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1",
-    api_key=os.environ.get("GROQ_API_KEY", "your_api_key_here"),
+    api_key=os.environ.get("GROQ_API_KEY"), 
 )
 MODEL = "llama-3.1-8b-instant"
 GRADERS = {1: grade_task1, 2: grade_task2, 3: grade_task3}
@@ -42,8 +50,14 @@ Available action types:
   {"action_type": "draft", "email_id": "email_001", "draft_text": "Dear customer..."}
   {"action_type": "send", "email_id": "email_001"}
 
-VALID CATEGORIES (use EXACTLY one of these strings, nothing else):
-  Billing | Technical | Sales | Spam | Other
+CRITICAL: You must ONLY use the categories: Billing, Technical, Sales, Spam, or Other. NEVER use placeholders or descriptive text. Once an email is categorized, do not attempt to categorize it again; move to the next email ID in the inbox.
+
+STRATEGY:
+1. First, categorize every email in the inbox one by one.
+2. For Billing emails: after categorizing, query the database using the sender's email.
+3. After getting DB results, draft a response that includes the customer's Order ID.
+4. After drafting, send the response.
+5. Continue until all emails are processed.
 
 STEP-BY-STEP STRATEGY:
   Phase 1 — CATEGORIZE: For each email NOT YET CATEGORIZED, output a 'categorize' action.
@@ -60,57 +74,45 @@ RULES:
 """
 
 
-def build_prompt(obs) -> str:
-    """Build a state-aware prompt that never leaks label text as category values."""
-    uncategorized = [e for e in obs.inbox if e.id not in obs.processed]
-    billing_ids = [
-        eid for eid, cat in (
-            # Only check emails that have been categorized
-            {e.id: obs.processed for e in obs.inbox if e.id in obs.processed}
-        ).items()
-    ]
-
-    lines = [
-        f"=== CURRENT STATE (Step {obs.step_number}) ===",
-        f"Task: {obs.task_id}",
-        "",
-        "--- INBOX ---",
-    ]
-
-    for e in obs.inbox:
-        done = e.id in obs.processed
-        drafted = e.id in obs.drafted_responses
-        tag = "[CATEGORIZED]" if done else "[NOT CATEGORIZED]"
-        dtag = " [DRAFT READY]" if drafted else ""
-        lines.append(
-            f"  {tag}{dtag} {e.id} | from: {e.sender} | subject: {e.subject} | body: {e.body}"
-        )
-
-    lines.append("")
-    lines.append(f"Categorized email IDs so far: {obs.processed}")
-    lines.append(f"Draft responses exist for: {list(obs.drafted_responses.keys())}")
-
+def build_prompt(obs, action_history: list = None, categorizations: dict = None) -> str:
+    prompt = f"Current step: {obs.step_number}.\n"
+    if categorizations is None:
+        categorizations = {}
+    prompt += f"Already categorized emails: {categorizations}\n"
+    prompt += f"Drafts ready for: {list(obs.drafted_responses.keys())}\n"
+    
+    if action_history:
+        prompt += f"Actions already taken: {list(set(action_history))}\n\n"
+    else:
+        prompt += "\n"
+        
+        
     if obs.db_query_result:
-        lines.append(f"\nLast DB result: {json.dumps(obs.db_query_result)}")
-    else:
-        lines.append("\nNo DB query has been made yet.")
-
-    lines.append("")
-    lines.append("--- WHAT TO DO NEXT ---")
-
-    if uncategorized:
-        next_email = uncategorized[0]
-        lines.append(f"Action needed: CATEGORIZE {next_email.id} (from {next_email.sender}, subject: {next_email.subject})")
-        lines.append("Choose EXACTLY one of these category strings: Billing, Technical, Sales, Spam, Other")
-        lines.append(f'Output: {{"action_type": "categorize", "email_id": "{next_email.id}", "category": "<ONE OF THE 5 VALID CATEGORIES>"}}')        
-    else:
-        lines.append("All emails are categorized. Move to Phase 2/3/4:")
-        lines.append("  - If a Billing email has no DB lookup yet: use query_db with the sender email.")
-        lines.append("  - If DB result exists and no draft yet: use draft (include the Order ID in draft_text).")
-        lines.append("  - If draft exists and not sent yet: use send.")
-
-    lines.append("\nReply with ONE JSON object only. No extra text.")
-    return "\n".join(lines)
+        prompt += f"Last DB Query Result: {dict(obs.db_query_result)}\n"
+        for e in obs.inbox:
+            if e.sender == obs.db_query_result.get("email"):
+                prompt += f"(This DB result belongs to email_id: {e.id})\n"
+        prompt += "\n"
+        
+    prompt += "--- INBOX DETAILS ---\n"
+    for e in obs.inbox:
+        if e.id in categorizations:
+            status = f"PROCESSED AS {categorizations[e.id].upper()}"
+        else:
+            status = "NEEDS CATEGORIZATION"
+        prompt += f"[{status}] ID: {e.id} | Sender: {e.sender} | Subject: {e.subject} | Body: {e.body}\n"
+        
+    prompt += "\nINSTRUCTIONS:\n"
+    prompt += "Process the inbox following this strict checklist. Find the first email that needs attention and perform the next required action:\n"
+    prompt += "  1. If an email is 'NEEDS CATEGORIZATION', select ONE and output: {\"action_type\": \"categorize\", \"email_id\": \"...\", \"category\": \"...\"}\n"
+    prompt += "  2. If an email is 'PROCESSED AS BILLING' but you haven't queried DB, output: {\"action_type\": \"query_db\", \"customer_email\": \"...\"}\n"
+    prompt += "  3. If DB Query Result is present for a Billing email, draft a response: {\"action_type\": \"draft\", \"email_id\": \"...\", \"draft_text\": \"...\"}\n"
+    prompt += "  4. If a response is drafted, you MUST send it: {\"action_type\": \"send\", \"email_id\": \"...\"}\n"
+    prompt += "  5. If an email has been PROCESSED AS anything other than BILLING, IGNORE it.\n"
+    prompt += "NEVER repeat an action listed in 'Actions already taken'!\n"
+    prompt += "What is your single NEXT action?"
+    
+    return prompt
 
 
 # Mapping to catch common LLM mislabellings before Pydantic validation
@@ -205,52 +207,42 @@ async def run_task_stream(task_id: int):
         }
         await asyncio.sleep(0.3)
 
-        # ── Call LLM (with up to 2 retries on parse failure) ──
-        prompt = build_prompt(obs)
-        action = None
-        last_error = None
-        retry_messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ]
-
-        for attempt in range(3):  # up to 3 attempts per step
-            try:
-                response = await asyncio.to_thread(
-                    client.chat.completions.create,
-                    model=MODEL,
-                    messages=retry_messages,
-                    response_format={"type": "json_object"},
-                    max_tokens=512,
-                    temperature=0.0,
-                )
-                raw = json.loads(response.choices[0].message.content)
-                action = parse_action(raw)
-                break  # success
-            except Exception as e:
-                last_error = e
-                # Feed the error back as an assistant + user pair for the next attempt
-                retry_messages = retry_messages + [
-                    {"role": "assistant", "content": response.choices[0].message.content
-                        if 'response' in dir() and response.choices else "{}"},
-                    {"role": "user", "content": (
-                        f"Your previous response caused a validation error: {e}\n"
-                        "Reply ONLY with a corrected JSON object. "
-                        "For category, use EXACTLY one of: Billing, Technical, Sales, Spam, Other"
-                    )},
-                ]
-                await asyncio.sleep(0.2)
-
-        if action is None:
+        # ── Call LLM ──
+        prompt = build_prompt(
+            obs, 
+            getattr(env, '_action_history', []), 
+            getattr(env, '_internal_state', {}).get('categorizations', {})
+        )
+        try:
+            response = await asyncio.to_thread(
+                client.chat.completions.create,
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=512,
+                temperature=0.0,
+            )
+            raw = json.loads(response.choices[0].message.content)
+            action = parse_action(raw)
+        except Exception as e:
+            obs.step_number += 1
             yield {
                 "event": "error",
                 "type": "penalty",
-                "text": f"❌ Agent failed after 3 attempts: {last_error}",
+                "text": f"❌ Agent failed: {e}",
                 "step": obs.step_number,
                 "max_steps": max_steps,
                 "cumulative_reward": env._cumulative_reward,
             }
-            break
+            if not hasattr(env, '_action_history'):
+                env._action_history = []
+            env._action_history.append(f"error:{str(e)[:40]}")
+            if obs.step_number >= max_steps:
+                break
+            continue
 
         # ── Event: ACTION PREVIEW ──
         action_text = ""
@@ -358,7 +350,11 @@ def run_task(task_id: int) -> float:
     print(f"{'='*50}")
 
     while not done:
-        prompt = build_prompt(obs)
+        prompt = build_prompt(
+            obs, 
+            getattr(env, '_action_history', []),
+            getattr(env, '_internal_state', {}).get('categorizations', {})
+        )
         try:
             response = client.chat.completions.create(
                 model=MODEL,
@@ -373,8 +369,14 @@ def run_task(task_id: int) -> float:
             raw = json.loads(response.choices[0].message.content)
             action = parse_action(raw)
         except Exception as e:
+            obs.step_number += 1
             print(f"  ❌ Inference/Parsing failed: {e}")
-            break
+            if not hasattr(env, '_action_history'):
+                env._action_history = []
+            env._action_history.append(f"error:{str(e)[:40]}")
+            if obs.step_number >= env._max_steps:
+                break
+            continue
 
         obs, reward, done, info = env.step(action)
         sign = "+" if reward.score >= 0 else ""
