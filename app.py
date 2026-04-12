@@ -43,23 +43,25 @@ def health():
 from pydantic import BaseModel
 from typing import Dict, Any
 
+from typing import Optional
+
 class ResetRequest(BaseModel):
     task_id: int = 1
 
-class StepRequest(BaseModel):
-    action: Dict[str, Any]
+
 
 _sessions = {}
 
 @app.post("/reset")
-def api_reset(req: ResetRequest):
+def api_reset(req: Optional[ResetRequest] = None):
+    task_id = req.task_id if req else 1
     env = EmailTriageEnv()
-    obs = env.reset(task_id=req.task_id)
+    obs = env.reset(task_id=task_id)
     _sessions["default"] = env
     return obs.model_dump() if hasattr(obs, "model_dump") else obs.dict()
 
 @app.post("/step")
-def api_step(req: StepRequest):
+async def api_step(body: Dict[str, Any]):
     env = _sessions.get("default")
     if not env:
         env = EmailTriageEnv()
@@ -68,8 +70,9 @@ def api_step(req: StepRequest):
         
     from inference import parse_action
     
+    action_data = body.get("action", body)
     try:
-        act = parse_action(req.action)
+        act = parse_action(action_data)
     except Exception as e:
         # Standard error feedback on invalid action format
         return {"error": str(e)}
