@@ -19,3 +19,6 @@ dependencies = [
     "websockets",
     "pytest"
 ]
+
+[project.scripts]
+server = "server.app:start_server"
