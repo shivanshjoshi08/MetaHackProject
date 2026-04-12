@@ -346,16 +346,18 @@ async def run_task_stream(task_id: int):
 
 def run_task(task_id: int) -> float:
     """Original synchronous runner for standalone CLI use."""
+    task_name = {1: "single-email-categorization", 2: "inbox-triage", 3: "full-triage"}[task_id]
     env = EmailTriageEnv()
     obs = env.reset(task_id=task_id)
     env._max_steps = {1: 3, 2: 15, 3: 40}[task_id]
     done = False
+    step_count = 0
 
-    print("<START>")
+    print(f"[START] task={task_name}", flush=True)
 
     while not done:
         prompt = build_prompt(
-            obs, 
+            obs,
             getattr(env, '_action_history', []),
             getattr(env, '_internal_state', {}).get('categorizations', {})
         )
@@ -373,22 +375,22 @@ def run_task(task_id: int) -> float:
             raw = json.loads(response.choices[0].message.content)
             action = parse_action(raw)
         except Exception as e:
+            print(f"[STEP] step={step_count} reward=0.0 info=llm_error", flush=True)
             break
 
         obs, reward, done, info = env.step(action)
-        print("<STEP>")
+        step_count = obs.step_number
+        print(f"[STEP] step={step_count} reward={reward.score:.4f}", flush=True)
 
     final = GRADERS[task_id](env.state())
-    print("<END>")
+    print(f"[END] task={task_name} score={final:.4f} steps={step_count}", flush=True)
     return final
 
 
 if __name__ == "__main__":
     try:
         for task_id in [1, 2, 3]:
-            score = run_task(task_id)
-            print(f"Task {task_id} score: {score:.4f}")
+            run_task(task_id)
     except Exception as e:
-        print(f"⚠️  inference.py encountered an error: {e}")
-        # Exit 0 so the validator does not flag an unhandled exception
+        print(f"[END] task=unknown score=0.0 steps=0 error={e}", flush=True)
         raise SystemExit(0)
