@@ -382,7 +382,9 @@ def run_task(task_id: int) -> float:
         step_count = obs.step_number
         print(f"[STEP] step={step_count} reward={reward.score:.4f}", flush=True)
 
-    final = GRADERS[task_id](env.state())
+    raw_score = GRADERS[task_id](env.state())
+    # Validator requires score strictly between 0 and 1 (exclusive)
+    final = max(0.01, min(0.99, raw_score))
     print(f"[END] task={task_name} score={final:.4f} steps={step_count}", flush=True)
     return final
 
@@ -392,5 +394,5 @@ if __name__ == "__main__":
         for task_id in [1, 2, 3]:
             run_task(task_id)
     except Exception as e:
-        print(f"[END] task=unknown score=0.0 steps=0 error={e}", flush=True)
+        print(f"[END] task=unknown score=0.01 steps=0 error={e}", flush=True)
         raise SystemExit(0)
