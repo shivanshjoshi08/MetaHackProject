@@ -23,11 +23,18 @@ from environment import (
 from tasks import grade_task1, grade_task2, grade_task3
 
 # ─── LLM Client ────────────────────────────────────────────────────────────────
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
+HF_TOKEN = os.getenv("HF_TOKEN")
+
+# Optional - if you use from_docker_image():
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+
 client = OpenAI(
-    base_url="https://api.groq.com/openai/v1",
-    api_key=os.environ.get("GROQ_API_KEY", "your_api_key_here"),
+    base_url=API_BASE_URL,
+    api_key=HF_TOKEN or os.environ.get("GROQ_API_KEY", "your_api_key_here"),
 )
-MODEL = "llama-3.1-8b-instant"
+MODEL = MODEL_NAME
 GRADERS = {1: grade_task1, 2: grade_task2, 3: grade_task3}
 
 SYSTEM_PROMPT = """
@@ -353,9 +360,7 @@ def run_task(task_id: int) -> float:
     env._max_steps = {1: 3, 2: 15, 3: 40}[task_id]
     done = False
 
-    print(f"\n{'='*50}")
-    print(f"  Task {task_id} — Starting")
-    print(f"{'='*50}")
+    print("<START>")
 
     while not done:
         prompt = build_prompt(obs)
@@ -373,19 +378,16 @@ def run_task(task_id: int) -> float:
             raw = json.loads(response.choices[0].message.content)
             action = parse_action(raw)
         except Exception as e:
-            print(f"  ❌ Inference/Parsing failed: {e}")
             break
 
         obs, reward, done, info = env.step(action)
-        sign = "+" if reward.score >= 0 else ""
-        print(f"  Step {obs.step_number}: {sign}{reward.score:.2f} | {reward.reason}")
+        print("<STEP>")
 
     final = GRADERS[task_id](env.state())
-    print(f"  Final Score: {final:.4f}\n")
+    print("<END>")
     return final
 
 
 if __name__ == "__main__":
     for task_id in [1, 2, 3]:
         score = run_task(task_id)
-        print(f"Task {task_id} Final Score: {score:.4f}")

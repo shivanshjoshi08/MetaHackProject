@@ -63,7 +63,8 @@ class EmailTriageEnv:
             self.db = []
             print("Warning: mock_data.json not found!")
 
-    def reset(self, task_id: int = 1) -> Observation:
+    def reset(self, **kwargs) -> Observation:
+        task_id = int(kwargs.get("task_id", 1))
         self._action_history = []
         self._cumulative_reward = 0.0
         self._max_steps = {1: 3, 2: 15, 3: 40}.get(task_id, 40)

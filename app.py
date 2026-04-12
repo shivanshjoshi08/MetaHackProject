@@ -12,7 +12,7 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from environment import EmailTriageEnv
-from baseline_inference import run_task_stream
+from inference import run_task_stream
 import uvicorn
 
 app = FastAPI(title="OpenEnv Email Triage")

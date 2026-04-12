@@ -12,4 +12,4 @@ COPY . .
 RUN openenv validate openenv.yaml
 
 # Default: run baseline inference (override via docker run args)
-CMD ["python", "baseline_inference.py"]
+CMD ["python", "inference.py"]
