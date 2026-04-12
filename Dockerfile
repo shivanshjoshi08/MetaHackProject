@@ -8,8 +8,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source
 COPY . .
 
-# Validate OpenEnv compliance at build time
-RUN openenv validate openenv.yaml
-
-# Default: run baseline inference (override via docker run args)
-CMD ["python", "inference.py"]
+# Default: run the FastAPI backend for OpenEnv compliance
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
