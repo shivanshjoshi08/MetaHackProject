@@ -13,9 +13,9 @@ import os
 load_dotenv()
 api_key = os.environ.get("GROQ_API_KEY", "")
 if api_key:
-    print(f"✅ Key loaded successfully (Starts with: {api_key[:7]}...)")
+    pass
 else:
-    print("⚠️  GROQ_API_KEY not set — running in offline/demo mode (no LLM calls)")
+    pass
  
 import json
 import asyncio
